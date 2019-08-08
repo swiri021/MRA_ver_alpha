@@ -60,7 +60,7 @@ class GSEA_calculator:
 		fig.savefig(filen)
 
 
-	def GSEA_exec(self, df1, df2, tf_set, weighted_score_type=1, nperm=1000, perm_type='gene_set', rs=np.random.RandomState(), single=False, scale=False, plot=False, plot_path='/home/ubuntu/codes/MRA_GSEA_proj/gsea_plot/'):
+	def GSEA_exec(self, df1, df2, tf_set, weighted_score_type=1, nperm=1000, perm_type='gene_set', rs=np.random.RandomState(), single=False, scale=False, plot=False, plot_path='/home/ubuntu/codes/MRA_GSEA_proj/example_result/gsea_plot/'):
 		assert perm_type=='gene_set' or perm_type=='phenotype', "Please, clarify permutation type(gene_set or phenoteyp)"
 
 		# 0 : TF ID, 1 : df1 result, 2: df2 result
@@ -76,151 +76,33 @@ class GSEA_calculator:
 				es1, esnull1, hit_ind1, RES1, leading_edge1, portion_le1 = self.enrichment_score(gene_list=rank_d1.index.tolist(), correl_vector=rank_d1.values.tolist(), gene_set=tf[1], weighted_score_type=weighted_score_type, nperm=nperm, rs=rs, single=single, scale=scale)
 				pval1 = self.gsea_pval([es1], [esnull1])
 				nes1 = self.normalize(es1,esnull1)
-				es2, esnull2, hit_ind2, RES2, leading_edge2, portion_le2 = self.enrichment_score(gene_list=rank_d2.index.tolist(), correl_vector=rank_d2.values.tolist(), gene_set=tf[2], weighted_score_type=weighted_score_type, nperm=nperm, rs=rs, single=single, scale=scale)
-				pval2 = self.gsea_pval([es2], [esnull2])
-				nes2 = self.normalize(es2,esnull2)
+				#es2, esnull2, hit_ind2, RES2, leading_edge2, portion_le2 = self.enrichment_score(gene_list=rank_d2.index.tolist(), correl_vector=rank_d2.values.tolist(), gene_set=tf[2], weighted_score_type=weighted_score_type, nperm=nperm, rs=rs, single=single, scale=scale)
+				#pval2 = self.gsea_pval([es2], [esnull2])
+				#nes2 = self.normalize(es2,esnull2)
 
 			elif perm_type=='phenotype':
 				es1, esnull1, hit_ind1, RES1, leading_edge1, portion_le1 = self.enrichment_score_phenotype(ranking_metric=rank_d1, gene_set=tf[1], weighted_score_type=weighted_score_type, nperm=nperm, rs=rs, single=single, scale=scale)
 				pval1 = self.gsea_pval([es1], [esnull1])
 				nes1 = self.normalize(es1,esnull1)
-				es2, esnull2, hit_ind2, RES2,leading_edge2, portion_le2 = self.enrichment_score_phenotype(ranking_metric=rank_d2, gene_set=tf[2], weighted_score_type=weighted_score_type, nperm=nperm, rs=rs, single=single, scale=scale)
-				pval2 = self.gsea_pval([es2], [esnull2])
-				nes2 = self.normalize(es2,esnull2)
+				#es2, esnull2, hit_ind2, RES2,leading_edge2, portion_le2 = self.enrichment_score_phenotype(ranking_metric=rank_d2, gene_set=tf[2], weighted_score_type=weighted_score_type, nperm=nperm, rs=rs, single=single, scale=scale)
+				#pval2 = self.gsea_pval([es2], [esnull2])
+				#nes2 = self.normalize(es2,esnull2)
 
 			if plot==True:
 				#print rank_d1
 				if perm_type=='phenotype':
-					rank_d1 = rank_d1[-1]
-					rank_d2 = rank_d2[-1]
+					rank_d1_p = rank_d1[-1]
+					#rank_d2_p = rank_d2[-1]
 
-				self.plot(rank_d1, nes1, pval1, RES1, hit_ind1, filen=plot_path+tf[0]+'_1side.png')
-				self.plot(rank_d2, nes2, pval2, RES2, hit_ind2, filen=plot_path+tf[0]+'_2side.png')
+				self.plot(rank_d1_p, nes1, pval1, RES1, hit_ind1, filen=plot_path+tf[0]+'_1side.png')
+				#self.plot(rank_d2_p, nes2, pval2, RES2, hit_ind2, filen=plot_path+tf[0]+'_2side.png')
 
-			gsea_result.append([tf[0], [es1, nes1, pval1], [es2,nes2,pval2]])
+			#gsea_result.append([tf[0], [es1, nes1, pval1], [es2,nes2,pval2]])
+			gsea_result.append([tf[0], es1, nes1, pval1])
 
 		return gsea_result
 
 
-	def ranking_metric(self, df1, df2, nperm, perm_type='gene_set',combined=True):
-		def array_divide(piv, arr):
-			res = []
-
-			if len(arr)%piv==0:
-				circ = int(round(len(arr)/piv))
-			else:
-				circ = int(round(len(arr)/piv) + 1)
-			numb = 0
-
-			for x in range(circ):
-				try:
-					numb = x*piv
-					a = arr[numb:numb+piv]
-					#numb = numb+100
-				except IndexError:
-					a = arr[numb:]
-
-				res.append(a)
-
-			return res
-
-		def s2n(df1, df2):
-			df1_mean = df1.mean(axis=1)
-			df2_mean = df2.mean(axis=1)
-
-			df1_std = df1.std(axis=1)
-			df2_std = df2.std(axis=1)
-
-			sub_mean = df1_mean-df2_mean
-			sum_std = df1_std+df2_std
-
-			result = sub_mean/sum_std
-
-			return result
-
-		if perm_type=='gene_set':
-			result = s2n(df1, df2)
-			if combined==True:
-				result1 = result
-				result1.name='S2N'
-				result1 = result1.to_frame()
-				result1.index = result1.index.map(lambda x:x+'+')
-
-				result2 = result
-				result2.name='S2N'
-				result2 = result2.to_frame()
-				result2 = result2.apply(lambda x:x*-1)
-				result2.index = result2.index.map(lambda x:x+'-')
-
-				combined_result = result1.append(result2)
-				combined_result = combined_result.sort_values(by=['S2N'],ascending=False)
-
-			else:
-				result1 = result.sort_values(ascending=False)
-				result1.name='S2N'
-				result1 = result1.to_frame()
-				combined_result = result1
-
-		elif perm_type=='phenotype':
-			queue = Queue()
-
-			df1_len, df2_len = len(df1.columns.tolist()), len(df2.columns.tolist())
-			tdf = pd.concat([df1, df2], axis=1)
-
-			pdf = np.random.choice(len(tdf.columns.tolist()), (nperm,len(tdf.columns.tolist())))
-			pdf = [[list(x)[:df1_len], list(x)[df1_len:]]for x in pdf]
-			pdf = pdf+[[range(len(tdf.columns.tolist()))[:df1_len], range(len(tdf.columns.tolist()))[df1_len:]]]
-
-
-			def multi_proc(slist,order):
-				result = [s2n(tdf[tdf.columns[x[0]]], tdf[tdf.columns[x[1]]]) for x in slist]
-				print order
-				queue.put((result,order))
-
-			#s2n_arr = [s2n(tdf[tdf.columns[x[0]]], tdf[tdf.columns[x[1]]]) for x in pdf]
-			new_multi_head = array_divide(10,pdf)
-			processes = [Process(target=multi_proc, args=(item,i)) for i, item in enumerate(new_multi_head)]
-			for p in processes:
-				p.start()
-
-			for p in processes:
-				p.join()
-			s2n_arr = [queue.get() for p in processes]
-			s2n_arr = sorted(s2n_arr, key=lambda tup: tup[1])
-
-			print s2n_arr
-
-			permutated_combined = []
-			for x in s2n_arr:
-				result = x
-				if combined==True:
-					result1 = result
-					result1.name='S2N'
-					result1 = result1.to_frame()
-					result1.index = result1.index.map(lambda x:x+'+')
-
-					result2 = result
-					result2.name='S2N'
-					result2 = result2.to_frame()
-					result2 = result2.apply(lambda x:x*-1)
-					result2.index = result2.index.map(lambda x:x+'-')
-
-					combined_result = result1.append(result2)
-					combined_result = combined_result.sort_values(by=['S2N'],ascending=False)
-					permutated_combined.append(combined_result)
-
-				else:
-					result1 = result.sort_values(ascending=False)
-					result1.name='S2N'
-					result1 = result1.to_frame()
-					combined_result = result1
-					permutated_combined.append(combined_result)
-
-			combined_result = permutated_combined
-
-		return combined_result
-
-	"""
 	def ranking_metric(self, df1, df2, nperm, perm_type='gene_set',combined=True):
 		def s2n(df1, df2):
 			df1_mean = df1.mean(axis=1)
@@ -297,7 +179,8 @@ class GSEA_calculator:
 			combined_result = permutated_combined
 
 		return combined_result
-	"""
+
+
 	####### FROM GSEAPY, It must be belong to GSEApy, and its copyright
 	def enrichment_score_phenotype(self, ranking_metric, gene_set, weighted_score_type=1, nperm=1000, perm_type='gene_set', rs=np.random.RandomState(), single=False, scale=False):
 		"""This is the most important function of GSEApy. It has the same algorithm with GSEA and ssGSEA.
@@ -324,7 +207,8 @@ class GSEA_calculator:
 		"""
 		correl_vector_array = []
 		tag_indicator_array = []
-		gene_list = ranking_metric[-1].index.tolist()
+
+		gene_list = ranking_metric[len(ranking_metric)-1].index.tolist()
 
 		for x in ranking_metric:
 			temp_gl=x.index.tolist()
@@ -385,9 +269,13 @@ class GSEA_calculator:
 
 			#print list(RES).index(min(RES))
 			tag_range = tag_indicator[-1]
-			tag_range = tag_range[:list(RES).index(max(RES))]
-			indices = np.nonzero(tag_range)
-			leading_edge = np.array(gene_list)[indices]
+			if max(RES)==np.nan:
+				leading_edge = np.nan
+
+			else:
+				tag_range = tag_range[:list(RES).index(max(RES))]
+				indices = np.nonzero(tag_range)
+				leading_edge = np.array(gene_list)[indices]
 
 		return es, esnull, hit_ind, RES, leading_edge, float(len(leading_edge))/float(len(gene_set))
 
@@ -521,7 +409,7 @@ class TF_process:
 		gene_set = pd.read_csv(data_location, index_col=0)
 		gene_set.index = gene_set.index.astype(str)
 
-		gene_set = gene_set.loc['190']####For testing
+		#gene_set = gene_set.loc['190']####For testing
 
 		tf_list = list(set(gene_set.index.tolist()))
 		tf_list = list(set(tf_list).intersection(set(df1.index.tolist())))
